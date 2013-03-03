@@ -6,6 +6,7 @@ import java.util.ResourceBundle;
 class Config {
 
     public static final String CLIENTSECRETS_LOCATION;
+    public static final String TEMPLATE_LOCATION;
     public static final String LOCAL_DIRECTORY_LOCATION;
     public static final String CREDENTIALSTORE_LOCATION;
 
@@ -14,6 +15,7 @@ class Config {
                 "net.coprg.coprg.config");
 
         CLIENTSECRETS_LOCATION = bundle.getString("CLIENTSECRETS_LOCATION");
+        TEMPLATE_LOCATION = bundle.getString("TEMPLATE_LOCATION");
         String localDirName = bundle.getString("LOCAL_DIRECTORY_NAME");
         File dir = new File(localDirName);
         if (!dir.isDirectory()) {

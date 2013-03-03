@@ -112,7 +112,7 @@ class OAuth {
             GsonFactory jsonFactory = new GsonFactory();
             GoogleClientSecrets clientSecrets =
                 GoogleClientSecrets.load(jsonFactory,
-                        GDrive.class.getResourceAsStream(CLIENTSECRETS_LOCATION));
+                        OAuth.class.getResourceAsStream(CLIENTSECRETS_LOCATION));
             flow =
                 new GoogleAuthorizationCodeFlow.Builder(httpTransport, jsonFactory, clientSecrets, SCOPES)
                 .setAccessType("offline").setCredentialStore(getStore()).build();
