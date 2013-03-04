@@ -1,6 +1,7 @@
 package net.coprg.coprg;
 
 import java.awt.Desktop;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -15,6 +16,8 @@ import net.coprg.coprg.OAuth.CodeExchangeException;
 import net.coprg.coprg.OAuth.NoRefreshTokenException;
 
 import com.google.api.client.auth.oauth2.Credential;
+import com.google.api.client.http.GenericUrl;
+import com.google.api.client.http.HttpResponse;
 import com.google.api.client.http.InputStreamContent;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
@@ -27,12 +30,11 @@ class GDrive {
 
     private static Drive service = null;
     private static List<File> fileList = null;
+    private static String errorString = null;
 
-    public static class GDriveListener {
-        public void onSuccess() {
-        }
-        public void onFailure() {
-        }
+    public static interface GDriveListener {
+        public void onSuccess();
+        public void onFailure();
     }
 
     /**
@@ -203,6 +205,131 @@ class GDrive {
         }
     }
 
+    public static void compileExecuteFile(int index,
+            final GDriveListener listener) {
+        if (fileList == null) {
+            refreshFileList(null);
+        }
+        File f = fileList.get(index);
+        if (f != null) {
+            try {
+                downloadFile(f, new GDriveListener() {
+                    @Override
+                    public void onSuccess() {
+                        compileFile(new GDriveListener() {
+                            @Override
+                            public void onSuccess() {
+                                executeFile();
+                            }
+
+                            @Override
+                            public void onFailure() {
+                                listener.onFailure();
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onFailure() {
+                        // TODO Auto-generated method stub
+
+                    }
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public static String getErrorString() {
+        return errorString;
+    }
+
+    private static void downloadFile(final File file,
+            final GDriveListener listener) {
+        new SwingWorker<InputStream, Void>() {
+            @Override
+            protected InputStream doInBackground() {
+                String downloadLink = file.getExportLinks().get("text/plain");
+                if (downloadLink != null && downloadLink.length() > 0) {
+                    try {
+                        HttpResponse resp =
+                            getService().getRequestFactory().buildGetRequest(
+                                    new GenericUrl(downloadLink))
+                            .execute();
+                        return resp.getContent();
+                    } catch (IOException e) {
+                        // An error occurred.
+                        e.printStackTrace();
+                        return null;
+                    }
+                } else {
+                    // The file doesn't have any content stored on Drive.
+                    return null;
+                }
+            }
+
+            @Override
+            public void done() {
+                try {
+                    InputStream in = get();
+                    if (in != null) {
+                        java.io.File file = new java.io.File("prg.cpp");
+                        if (!file.exists()) {
+                            file.createNewFile();
+                        }
+                        FileOutputStream fw = new FileOutputStream(file.getAbsoluteFile());
+
+                        int read = 0;
+                        byte[] bytes = new byte[1024];
+
+                        while ((read = in.read(bytes)) != -1) {
+                            fw.write(bytes, 0, read);
+                        }
+                        fw.flush();
+                        fw.close();
+                        listener.onSuccess();
+                    }
+                } catch (InterruptedException | ExecutionException | IOException e) {
+                    e.printStackTrace();
+                }
+                listener.onFailure();
+            }
+        }.execute();
+    }
+
+    private static void compileFile(final GDriveListener listener) {
+        ProcessStreamHandler psh = null;
+        try {
+            Process process = new ProcessBuilder("MinGW" + java.io.File.separator
+                    + "bin" + java.io.File.separator + "g++.exe", "prg.cpp",
+                    "-o", "prg.exe").start();
+            psh = new ProcessStreamHandler(process.getErrorStream());
+            psh.start();
+            if (process.waitFor() == 0) {
+                listener.onSuccess();
+                return;
+            }
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        if (psh != null) {
+            errorString = psh.getOutputBuffer().toString();
+        }
+        listener.onFailure();
+    }
+
+    private static void executeFile() {
+        try {
+            new ProcessBuilder("cmd.exe", "/C", "start",
+                    "cb_console_runner.exe", "prg.exe").start();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+
     private static List<File> retrieveAllFiles(Drive service) throws IOException {
         List<File> result = new ArrayList<File>();
         Files.List request = service.files().list().setQ(
@@ -211,7 +338,6 @@ class GDrive {
         do {
             try {
                 FileList files = request.execute();
-
                 result.addAll(files.getItems());
                 request.setPageToken(files.getNextPageToken());
             } catch (IOException e) {

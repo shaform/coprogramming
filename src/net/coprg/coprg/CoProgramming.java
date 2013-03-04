@@ -25,6 +25,7 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JSeparator;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
@@ -35,7 +36,7 @@ import net.coprg.coprg.GDrive.GDriveListener;
 
 public class CoProgramming {
 
-    private JFrame frmCoprogramming;
+    JFrame frmCoprogramming;
     private CardLayout cardCoprogramming;
     private JTextField fieldAuthorizeCode;
     private JList<String> fileList;
@@ -95,7 +96,7 @@ public class CoProgramming {
         frmCoprogramming.setTitle(ResourceBundle.getBundle(
                     "net.coprg.coprg.messages").getString(
                         "CoProgramming.frmCoprogramming.title"));
-        frmCoprogramming.setMinimumSize(new Dimension(300, 300));
+        frmCoprogramming.setMinimumSize(new Dimension(320, 300));
         frmCoprogramming.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         cardCoprogramming = new CardLayout(0, 0);
         frmCoprogramming.getContentPane().setLayout(cardCoprogramming);
@@ -270,6 +271,12 @@ public class CoProgramming {
                         public void onSuccess() {
                             showCard("edit");
                         }
+
+                        @Override
+                        public void onFailure() {
+                            // TODO Auto-generated method stub
+
+                        }
                     });
             }
         });
@@ -288,6 +295,28 @@ public class CoProgramming {
                 int index = fileList.getSelectedIndex();
                 if (index != -1) {
                     GDrive.openFilePage(index);
+                }
+            }
+        });
+        btnExecute.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent _) {
+                int index = fileList.getSelectedIndex();
+                if (index != -1) {
+                    GDrive.compileExecuteFile(index,
+                        new GDriveListener() {
+                            @Override
+                            public void onSuccess() {
+                                // TODO Auto-generated method stub
+
+                            }
+
+                            @Override
+                            public void onFailure() {
+                                if (GDrive.getErrorString() != null) {
+                                    new ErrorDialog(GDrive.getErrorString());
+                                }
+                        }
+                    });
                 }
             }
         });
@@ -312,6 +341,12 @@ public class CoProgramming {
                 for (String s : GDrive.getFileTitles()) {
                     fileListModel.addElement(s);
                 }
+            }
+
+            @Override
+            public void onFailure() {
+                // TODO Auto-generated method stub
+
             }
         });
     }
@@ -367,6 +402,7 @@ class NewFileDialog extends JDialog implements ActionListener {
         pack();
 
         setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        setLocationRelativeTo(parent.frmCoprogramming);
         setVisible(true);
     }
 
@@ -379,6 +415,12 @@ class NewFileDialog extends JDialog implements ActionListener {
                     public void onSuccess() {
                         parent.refreshList();
                     }
+
+                    @Override
+                    public void onFailure() {
+                        // TODO Auto-generated method stub
+
+                    }
                 });
             }
             dispose();
@@ -387,3 +429,31 @@ class NewFileDialog extends JDialog implements ActionListener {
         }
     }
 }
+
+class ErrorDialog extends JDialog{
+
+    private static final long serialVersionUID = 4990437623650838531L;
+    private JTextArea textArea;
+
+    /**
+     * Create the dialog.
+     */
+    public ErrorDialog(String text) {
+        setTitle(ResourceBundle.getBundle("net.coprg.coprg.messages")
+                .getString("ErrorDialog.title"));
+        getContentPane().setLayout(new BorderLayout());
+        JPanel contentPanel = new JPanel();
+        contentPanel.setLayout(new FlowLayout());
+        contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
+        getContentPane().add(contentPanel, BorderLayout.CENTER);
+        {
+            textArea = new JTextArea(text);
+            textArea.setEditable(false);
+            contentPanel.add(textArea);
+        }
+        pack();
+        setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        setVisible(true);
+    }
+}
+
