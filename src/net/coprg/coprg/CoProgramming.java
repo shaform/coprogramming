@@ -11,8 +11,13 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
+import java.awt.Toolkit;
+import java.awt.datatransfer.DataFlavor;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.InputEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.ResourceBundle;
 
 import javax.swing.Box;
@@ -24,6 +29,7 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JSeparator;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
@@ -31,6 +37,7 @@ import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
+import javax.swing.text.DefaultEditorKit;
 
 import net.coprg.coprg.GDrive.GDriveListener;
 
@@ -77,6 +84,10 @@ public class CoProgramming {
 
     public void showAuthorize() {
         showCard("authorize");
+    }
+
+    public void showConnect() {
+        showCard("connect");
     }
 
     private void showCard(String name) {
@@ -183,6 +194,7 @@ public class CoProgramming {
         fieldAuthorizeCode = new JTextField();
         panel_4.add(fieldAuthorizeCode);
         fieldAuthorizeCode.setColumns(15);
+        fieldAuthorizeCode.addMouseListener(new ContextMenuHandler());
 
         JButton btnAuthorize = new JButton(ResourceBundle.getBundle(
                     "net.coprg.coprg.messages").getString(
@@ -265,19 +277,20 @@ public class CoProgramming {
 
         btnAuthorize.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent _) {
+                showConnect();
                 GDrive.authorize(fieldAuthorizeCode.getText(),
                     new GDriveListener() {
                         @Override
                         public void onSuccess() {
-                            showCard("edit");
+                            showEdit();
                         }
 
                         @Override
                         public void onFailure() {
                             // TODO Auto-generated method stub
-
+                            showAuthorize();
                         }
-                    });
+                });
             }
         });
         btnLink.addActionListener(new ActionListener() {
@@ -315,7 +328,7 @@ public class CoProgramming {
                                 if (GDrive.getErrorString() != null) {
                                     new ErrorDialog(GDrive.getErrorString());
                                 }
-                        }
+                            }
                     });
                 }
             }
@@ -380,6 +393,7 @@ class NewFileDialog extends JDialog implements ActionListener {
             textField = new JTextField();
             contentPanel.add(textField);
             textField.setColumns(10);
+            textField.addMouseListener(new ContextMenuHandler());
         }
         {
             JPanel buttonPane = new JPanel();
@@ -454,6 +468,27 @@ class ErrorDialog extends JDialog{
         pack();
         setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         setVisible(true);
+    }
+}
+
+class ContextMenuHandler extends MouseAdapter {
+
+    @Override
+    public void mouseClicked(MouseEvent e) {
+        if (e.getModifiers() == InputEvent.BUTTON3_MASK) {
+            if (e.getSource() instanceof JTextField) {
+                JPopupMenu popup = new JPopupMenu();
+                JTextField textField = (JTextField) e.getSource();
+                popup.add(textField.getActionMap().get(
+                            DefaultEditorKit.pasteAction));
+                if (textField.isEditable()
+                        && textField.isEnabled()
+                        && Toolkit.getDefaultToolkit().getSystemClipboard().getContents(
+                            null).isDataFlavorSupported(DataFlavor.stringFlavor)) {
+                    popup.show(e.getComponent(), e.getX(), e.getY());
+                            }
+            }
+        }
     }
 }
 
